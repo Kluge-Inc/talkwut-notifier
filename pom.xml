@@ -41,6 +41,13 @@
     </repositories>
 
     <build>
+        <resources>
+            <resource>
+                <targetPath>resources</targetPath>
+                <filtering>false</filtering>
+                <directory>${basedir}/resources</directory>
+            </resource>
+        </resources>
         <plugins>
             <plugin>
                 <artifactId>maven-assembly-plugin</artifactId>

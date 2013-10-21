@@ -11,12 +11,13 @@ import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
 import com.rabbitmq.client.QueueingConsumer;
 
+import javax.swing.*;
 import java.awt.*;
 import java.io.IOException;
 import java.net.URI;
 
 public class Application {
-    private final static String EXCHANGE_NAME = "hello";
+    private final static String EXCHANGE_NAME = "notifier";
 
     public static void main(String[] args) throws IOException, InterruptedException {
         // AA the text
@@ -30,15 +31,13 @@ public class Application {
                 ;
 
         ConnectionFactory factory = new ConnectionFactory();
-        factory.setHost("atc-2478");
+        factory.setHost("192.168.9.118");
         Connection connection = factory.newConnection();
         Channel channel = connection.createChannel();
 
         channel.exchangeDeclare(EXCHANGE_NAME, "fanout");
         String queueName = channel.queueDeclare().getQueue();
         channel.queueBind(queueName, EXCHANGE_NAME, "");
-
-        System.out.println(" [*] Waiting for messages. To exit press CTRL+C");
 
         QueueingConsumer consumer = new QueueingConsumer(channel);
         channel.basicConsume(queueName, true, consumer);
@@ -47,12 +46,11 @@ public class Application {
             QueueingConsumer.Delivery delivery = consumer.nextDelivery();
             String message = new String(delivery.getBody());
 
-            System.out.println(" [x] Received '" + message + "'");
             new NotificationBuilder()
                     .withStyle(style) // Required. here we set the previously set style
                     .withTitle("NRIV") // Required.
                     .withMessage(message) // Optional
-//                .withIcon(new ImageIcon(Application.class.getResource("/twinkle.png"))) // Optional. You could also use a String path
+                    .withIcon(new ImageIcon(Application.class.getResource("/resources/pony.png"))) // Optional. You could also use a String path
                     .withDisplayTime(7000) // Optional
                     .withPosition(Positions.SOUTH_EAST) // Optional. Show it at the center of the screen
                     .withListener(new NotificationEventAdapter() { // Optional
