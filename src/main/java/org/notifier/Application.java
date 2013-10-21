@@ -10,14 +10,17 @@ import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
 import com.rabbitmq.client.QueueingConsumer;
+import talkwut.core.Protocol;
 
 import javax.swing.*;
 import java.awt.*;
 import java.io.IOException;
 import java.net.URI;
 
+
 public class Application {
-    private final static String EXCHANGE_NAME = "notifier";
+    private static String twUserRegistrationQueue = "talkwut-register";
+    private static String twUserName = "giko";
 
     public static void main(String[] args) throws IOException, InterruptedException {
         // AA the text
@@ -35,21 +38,27 @@ public class Application {
         Connection connection = factory.newConnection();
         Channel channel = connection.createChannel();
 
-        channel.exchangeDeclare(EXCHANGE_NAME, "fanout");
-        String queueName = channel.queueDeclare().getQueue();
-        channel.queueBind(queueName, EXCHANGE_NAME, "");
+        String queueName = "talkwut-user-" + twUserName;
+        channel.queueDeclare(queueName, false, false, true, null);
+
+
+        Protocol.Registration registration = Protocol.Registration.newBuilder()
+                .setQueue(queueName).setUser(twUserName).build();
+
+        channel.queueDeclare(twUserRegistrationQueue, true, false, true, null);
+        channel.basicPublish("", twUserRegistrationQueue, null, registration.toByteArray());
 
         QueueingConsumer consumer = new QueueingConsumer(channel);
         channel.basicConsume(queueName, true, consumer);
 
         while (true) {
             QueueingConsumer.Delivery delivery = consumer.nextDelivery();
-            String message = new String(delivery.getBody());
+            final talkwut.notifier.Protocol.Notification notification = talkwut.notifier.Protocol.Notification.parseFrom(delivery.getBody());
 
             new NotificationBuilder()
                     .withStyle(style) // Required. here we set the previously set style
-                    .withTitle("NRIV") // Required.
-                    .withMessage(message) // Optional
+                    .withTitle(notification.getCategory()) // Required.
+                    .withMessage(notification.getMessage()) // Optional
                     .withIcon(new ImageIcon(Application.class.getResource("/resources/pony.png"))) // Optional. You could also use a String path
                     .withDisplayTime(7000) // Optional
                     .withPosition(Positions.SOUTH_EAST) // Optional. Show it at the center of the screen
@@ -60,16 +69,14 @@ public class Application {
 
                         public void clicked(NotificationEvent event) {
                             try {
-                                Desktop.getDesktop().browse(URI.create("http://192.168.24.169:8001/nrivapp/com.order/1"));
+                                Desktop.getDesktop().browse(URI.create(notification.getUrl()));
                             } catch (IOException e) {
                                 e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
                             }
                         }
                     })
                     .showNotification(); // this returns a UUID that you can use to identify events on the listener
-
         }
-
     }
 
 }
